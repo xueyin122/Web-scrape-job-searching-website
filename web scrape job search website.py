@@ -1,8 +1,8 @@
 base_url = 'https://www.jobstreet.com.sg/en/job-search/job-vacancy.php'
 pay_load = {'key':'','area':1,'option':1,'pg':None,'classified':1,'src':16,'srcr':12}
-pay_load['key'] = 'health data project'
+pay_load['key'] = 'health data project' # this can be changed to any other keywords
 
-# page number
+# Load the first 20 pages that are having job postings related to the keywords, extract position names, company names, and URLs
 pn = 1
 job_list = []
 position_links = []
@@ -35,6 +35,7 @@ while loaded and pn < 21:
             position_links += links
             pn += 1
  
+# Put the extracted information into a data frame
 job_df = pd.DataFrame (job_list, columns = ['job', 'company', 'URL'])
 job_df['job'] = job_df['job'].str[0]
 job_df['company'] = job_df['company'].str[0]
@@ -43,7 +44,7 @@ job_df = job_df.drop_duplicates()
 job_df = job_df.reset_index()
 job_df["URL_full"] = "https://www.jobstreet.com.sg" + job_df['URL'] 
 
-
+# Get the full job description and requirements based on the URLs
 job_requirements_list = []
 for i in range(len(job_df['URL_full'])):
     url = job_df['URL_full'][i]
@@ -75,7 +76,7 @@ job_df['job requirements'] = job_requirements_list
 job_df['job requirements'] = job_df['job requirements'].apply(lambda x: str(x).replace('[','').replace(']','')) 
 job_df['job requirements'] = job_df['job requirements'].apply(lambda x: str(x).replace('\\xa0','')) 
 
-
+# Apply data cleaning to job descriptions (remove stopwords, punctuations, space, numbers etc.)
 def preprocess(text):
     text = text.lower() 
     text=text.strip()  
@@ -97,13 +98,14 @@ def finalpreprocess(string):
 
 job_df['job requirements clean'] = job_df['job requirements'].apply(lambda x: finalpreprocess(x))
 
-
+# Find the most frequently used words in each job description
 def findtopwords(text):
     counts = Counter(re.findall('\w+', text))
     return counts.most_common()[0:5]
 
 job_df['job requirements word counts'] = job_df['job requirements clean'].apply(lambda x: findtopwords(x))
 
+# Create custom flags to find postings that are most related to our interestes
 job_df['flag - programming'] = job_df['job requirements clean'].str.contains('programming', regex=False)
 job_df['flag - r'] = job_df['job requirements clean'].str.contains(' r ', regex=False)
 job_df['flag - python'] = job_df['job requirements clean'].str.contains('python', regex=False)
@@ -115,4 +117,7 @@ job_df['flag - survey'] = job_df['job requirements clean'].str.contains('survey'
 cols = ['flag - programming', 'flag - r', 'flag - python', 'flag - spss', 'flag - mental', 'flag - project', 'flag - survey']
 job_df['flag numbers'] = job_df[cols].sum(axis=1)
 
+# Export the data frame to a csv file
 job_df.to_csv(r'your working directory\Job search.csv', index=False)
+
+# In the data frame or csv file we can further sort by number of flags and filter out the job postings that are more related to our interests.
